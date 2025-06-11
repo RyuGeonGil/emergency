@@ -65,7 +65,19 @@ class NotificationService {
       final response = await http.get(url);
       
       if (response.statusCode == 200) {
-        final List<dynamic> notifications = json.decode(response.body);
+        final dynamic decodedResponse = json.decode(response.body);
+        List<dynamic> notifications;
+        
+        if (decodedResponse is List) {
+          notifications = decodedResponse;
+        } else if (decodedResponse is Map) {
+          // If the response is a map, try to extract notifications list
+          notifications = decodedResponse['notifications'] as List? ?? [];
+        } else {
+          print('Unexpected response format: $decodedResponse');
+          return;
+        }
+
         for (var notification in notifications) {
           if (notification['uid'] == _uid) {
             await _showNotification(
