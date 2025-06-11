@@ -114,31 +114,7 @@ class DeviceApi {
         throw Exception('Failed to toggle device: ${deviceResponse.statusCode} - ${deviceResponse.body}');
       }
 
-      // Send notification
-      final uid = SessionManager().uid;
-      if (uid != null) {
-        final now = DateTime.now().toIso8601String();
-        final notificationHeaders = _getHeaders(uid: uid);
-        
-        final notificationBody = json.encode({
-          'content': turnOn ? '꺼져있던 머신 켜짐' : '켜져있던 머신 꺼짐',
-          'time': now,
-          'about': 1,
-        });
 
-        print('[DeviceAPI] Sending notification to: $notificationUrl');
-        final notificationResponse = await http.post(
-          notificationUrl,
-          headers: notificationHeaders,
-          body: notificationBody,
-        );
-        print('[DeviceAPI] Notification response - Status: ${notificationResponse.statusCode}, Body: ${notificationResponse.body}');
-
-        if (notificationResponse.statusCode != 200) {
-          print('[DeviceAPI] Warning: Failed to send notification: ${notificationResponse.statusCode} - ${notificationResponse.body}');
-          // Don't throw here as the device toggle was successful
-        }
-      }
     } catch (e) {
       print('[DeviceAPI] Error toggling device: $e');
       throw Exception('Failed to toggle device: $e');
