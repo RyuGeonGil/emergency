@@ -8,7 +8,13 @@ import 'gps.dart';
 import 'session.dart';
 // 로그인 페이지 위젯 (StatefulWidget으로 입력값 관리)
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String? errorMessage;
+  
+  const LoginPage({
+    super.key,
+    this.errorMessage,
+  });
+  
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -71,21 +77,29 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(url, headers: headers, body: body);
+      print('[Login] Server response - Status: ${response.statusCode}, Body: ${response.body}');
 
       final sessionToken = response.body.trim();
 
       if (response.statusCode == 200 && sessionToken.isNotEmpty) {
+        print('[Login] Login successful, configuring services...');
         setState(() {
           _sessionToken = sessionToken;
         });
+        
         //세션 매니저에 세션 토큰과 서버 정보 등록 (자동 갱신 시작)
+        print('[Login] Configuring SessionManager...');
         SessionManager().configure(
           sessionToken: sessionToken,
           ip: inputText,
           port: portText,
+          uid: userId.toString(),
         );
-
+        print('[Login] Saving credentials to storage...');
+        await SessionManager().saveToStorage();
+        
         // NotificationService, GpsTracker 등에 서버 정보 및 세션 토큰 전달
+        print('[Login] Configuring NotificationService...');
         NotificationService().configure(
           ip: inputText,
           port: portText,
@@ -93,6 +107,7 @@ class _LoginPageState extends State<LoginPage> {
         );
         NotificationService().startPolling();
 
+        print('[Login] Configuring GpsTracker...');
         GpsTracker().configure(
           ip: inputText,
           port: portText,
@@ -100,17 +115,19 @@ class _LoginPageState extends State<LoginPage> {
         );
         GpsTracker().startTracking();
 
+        print('[Login] All services configured, navigating to lobby...');
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const LobbyScreen()),
         );
-        // 로그인 성공 시 추가 작업 가능
       } else {
+        print('[Login] Login failed - Status: ${response.statusCode}, Body: ${response.body}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('로그인 실패 또는 세션 토큰 없음: ${response.body}')),
         );
       }
     } catch (e) {
+      print('[Login] Connection error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('서버 연결 실패: $e')),
       );
@@ -126,11 +143,38 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (widget.errorMessage != null) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             // 문자열 입력 필드
             TextField(
               controller: _textController, // 입력값을 컨트롤러로 관리
               decoration: const InputDecoration(
-                labelText: '문자열 입력', // 힌트(라벨) 텍스트
+                labelText: '서버 주소 입력', // 힌트(라벨) 텍스트
                 border: OutlineInputBorder(), // 테두리 스타일
               ),
             ),
