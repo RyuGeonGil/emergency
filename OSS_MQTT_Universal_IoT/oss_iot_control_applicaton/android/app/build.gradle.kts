@@ -22,7 +22,7 @@ android {
         coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {

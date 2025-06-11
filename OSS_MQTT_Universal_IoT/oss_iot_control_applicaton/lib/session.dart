@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SessionManager {
   // 싱글톤 패턴
@@ -10,9 +11,9 @@ class SessionManager {
   String? _sessionToken;
   String? _ip;
   String? _port;
-
+  String? _uid;
   Timer? _renewTimer;
-
+  String? get uid => _uid;
   Timer? get renewTimer => _renewTimer;
   Future<void> renewSession() => _renewSession();
   /// 세션 키, 서버 정보 저장
@@ -20,11 +21,45 @@ class SessionManager {
     required String sessionToken,
     required String ip,
     required String port,
+    required String uid,
   }) {
     _sessionToken = sessionToken;
     _ip = ip;
     _port = port;
+    _uid = uid;
     _setupRenewTimer();
+  }
+
+  Future<void> saveToStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_sessionToken != null) {
+      await prefs.setString('session_token', _sessionToken!);
+    }
+    if (_ip != null) {
+      await prefs.setString('server_ip', _ip!);
+    }
+    if (_port != null) {
+      await prefs.setString('server_port', _port!);
+    }
+    if (_uid != null) {
+      await prefs.setString('uid', _uid!);
+    }
+  }
+
+  Future<void> loadFromStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    _sessionToken = prefs.getString('session_token');
+    _ip = prefs.getString('server_ip');
+    _port = prefs.getString('server_port');
+    _uid = prefs.getString('uid'); // 추가
+  }
+
+  Future<void> clearStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('session_token');
+    await prefs.remove('server_ip');
+    await prefs.remove('server_port');
+    await prefs.remove('uid'); // 추가
   }
 
   /// 세션 키 반환 (앱 전체에서 사용)

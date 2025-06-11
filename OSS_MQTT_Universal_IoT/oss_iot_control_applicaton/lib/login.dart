@@ -83,8 +83,9 @@ class _LoginPageState extends State<LoginPage> {
           sessionToken: sessionToken,
           ip: inputText,
           port: portText,
+          uid: userId.toString(), // 반드시 추가!
         );
-
+        await SessionManager().saveToStorage();
         // NotificationService, GpsTracker 등에 서버 정보 및 세션 토큰 전달
         NotificationService().configure(
           ip: inputText,
