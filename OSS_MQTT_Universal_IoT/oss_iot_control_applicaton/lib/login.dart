@@ -33,6 +33,51 @@ class _LoginPageState extends State<LoginPage> {
   // 세션 토큰 저장 변수
   String? _sessionToken;
 
+  // 에러 메시지를 표시하는 함수
+  void _showError(BuildContext context, String message, {String? details}) {
+    print('[Login Error] $message${details != null ? '\nDetails: $details' : ''}');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(message),
+            if (details != null)
+              Text(
+                details,
+                style: const TextStyle(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+          ],
+        ),
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        action: details != null ? SnackBarAction(
+          label: '자세히',
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('오류 상세'),
+                content: SingleChildScrollView(
+                  child: Text(details),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('확인'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ) : null,
+      ),
+    );
+  }
+
   // 로그인 버튼 클릭 시 실행되는 함수
   Future<void> _onLogin(BuildContext context, String code) async {
     String inputText = _textController.text.trim(); // 문자열 입력값
@@ -41,41 +86,34 @@ class _LoginPageState extends State<LoginPage> {
 
     // 주소 입력이 비었는지 체크
     if (inputText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('주소를 입력해주세요.')),
-      );
+      _showError(context, '주소를 입력해주세요.');
       return;
     }
     if (portText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('포트 번호를 입력해주세요.')),
-      );
+      _showError(context, '포트 번호를 입력해주세요.');
       return;
     }
     if (uidText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('uid를 입력해주세요.')),
-      );
+      _showError(context, 'uid를 입력해주세요.');
       return;
     }
     // uid는 숫자만 입력 가능
     int? userId = int.tryParse(uidText);
     if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('uid는 숫자만 입력해야 합니다.')),
-      );
+      _showError(context, 'uid는 숫자만 입력해야 합니다.');
       return;
     }
 
-    // 서버로 uid와 인증코드 전송
-    final url = Uri.parse('http://$inputText:$portText/connect');
-    final headers = {'Content-Type': 'application/json'};
-    final body = jsonEncode({
-      'uid': userId,
-      'auth_code': code,
-    });
-
     try {
+      // 서버로 uid와 인증코드 전송
+      final url = Uri.parse('http://$inputText:$portText/connect');
+      final headers = {'Content-Type': 'application/json'};
+      final body = jsonEncode({
+        'uid': userId,
+        'auth_code': code,
+      });
+
+      print('[Login] Attempting to connect to server at: $url');
       final response = await http.post(url, headers: headers, body: body);
       print('[Login] Server response - Status: ${response.statusCode}, Body: ${response.body}');
 
@@ -87,50 +125,87 @@ class _LoginPageState extends State<LoginPage> {
           _sessionToken = sessionToken;
         });
         
-        //세션 매니저에 세션 토큰과 서버 정보 등록 (자동 갱신 시작)
-        print('[Login] Configuring SessionManager...');
-        SessionManager().configure(
-          sessionToken: sessionToken,
-          ip: inputText,
-          port: portText,
-          uid: userId.toString(),
-        );
-        print('[Login] Saving credentials to storage...');
-        await SessionManager().saveToStorage();
-        
-        // NotificationService, GpsTracker 등에 서버 정보 및 세션 토큰 전달
-        print('[Login] Configuring NotificationService...');
-        NotificationService().configure(
-          ip: inputText,
-          port: portText,
-          uid: userId,
-        );
-        NotificationService().startPolling();
+        try {
+          //세션 매니저에 세션 토큰과 서버 정보 등록 (자동 갱신 시작)
+          print('[Login] Configuring SessionManager...');
+          SessionManager().configure(
+            sessionToken: sessionToken,
+            ip: inputText,
+            port: portText,
+            uid: userId.toString(),
+          );
+          print('[Login] Saving credentials to storage...');
+          await SessionManager().saveToStorage();
+          
+          // NotificationService 설정
+          print('[Login] Configuring NotificationService...');
+          NotificationService().configure(
+            ip: inputText,
+            port: portText,
+            uid: userId,
+          );
+          NotificationService().startPolling();
 
-        print('[Login] Configuring GpsTracker...');
-        GpsTracker().configure(
-          ip: inputText,
-          port: portText,
-          uid: userId,
-        );
-        GpsTracker().startTracking();
+          // GpsTracker 설정
+          print('[Login] Configuring GpsTracker...');
+          GpsTracker().configure(
+            ip: inputText,
+            port: portText,
+            uid: userId,
+          );
+          GpsTracker().startTracking();
 
-        print('[Login] All services configured, navigating to lobby...');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LobbyScreen()),
-        );
+          print('[Login] All services configured, navigating to lobby...');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LobbyScreen()),
+          );
+        } catch (serviceError) {
+          print('[Login] Service configuration error: $serviceError');
+          _showError(
+            context,
+            '서비스 구성 중 오류가 발생했습니다.',
+            details: '세부 오류: $serviceError\n서비스 구성에 실패했지만 로그인은 성공했습니다. 앱을 다시 시작해주세요.',
+          );
+        }
       } else {
         print('[Login] Login failed - Status: ${response.statusCode}, Body: ${response.body}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('로그인 실패 또는 세션 토큰 없음: ${response.body}')),
-        );
+        String errorMessage = '로그인에 실패했습니다.';
+        String? details;
+        
+        switch (response.statusCode) {
+          case 400:
+            errorMessage = '잘못된 요청입니다.';
+            details = '입력하신 정보를 다시 확인해주세요.';
+            break;
+          case 401:
+            errorMessage = '인증에 실패했습니다.';
+            details = '인증 코드를 확인해주세요.';
+            break;
+          case 404:
+            errorMessage = '서버를 찾을 수 없습니다.';
+            details = '서버 주소와 포트를 확인해주세요.';
+            break;
+          default:
+            details = '서버 응답: ${response.body}';
+        }
+        
+        _showError(context, errorMessage, details: details);
       }
     } catch (e) {
       print('[Login] Connection error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('서버 연결 실패: $e')),
-      );
+      String errorMessage = '서버 연결에 실패했습니다.';
+      String details = '네트워크 연결을 확인하고 다시 시도해주세요.\n\n오류 내용: $e';
+      
+      if (e is http.ClientException) {
+        if (e.message.contains('Connection refused')) {
+          details = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
+        } else if (e.message.contains('Connection timed out')) {
+          details = '서버 응답 시간이 초과되었습니다. 네트워크 상태를 확인해주세요.';
+        }
+      }
+      
+      _showError(context, errorMessage, details: details);
     }
   }
 
