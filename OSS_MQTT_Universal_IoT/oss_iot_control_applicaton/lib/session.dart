@@ -31,6 +31,7 @@ class SessionManager {
   }
 
   Future<void> saveToStorage() async {
+    print('[SessionManager] Saving credentials to storage...');
     final prefs = await SharedPreferences.getInstance();
     if (_sessionToken != null) {
       await prefs.setString('session_token', _sessionToken!);
@@ -44,22 +45,33 @@ class SessionManager {
     if (_uid != null) {
       await prefs.setString('uid', _uid!);
     }
+    print('[SessionManager] Saved credentials - IP: $_ip, Port: $_port, UID: $_uid, Token: ${_sessionToken?.substring(0, 5)}...');
   }
 
   Future<void> loadFromStorage() async {
+    print('[SessionManager] Loading credentials from storage...');
     final prefs = await SharedPreferences.getInstance();
     _sessionToken = prefs.getString('session_token');
     _ip = prefs.getString('server_ip');
     _port = prefs.getString('server_port');
-    _uid = prefs.getString('uid'); // 추가
+    _uid = prefs.getString('uid');
+    print('[SessionManager] Loaded credentials - IP: $_ip, Port: $_port, UID: $_uid, Has Token: ${_sessionToken != null}');
   }
 
   Future<void> clearStorage() async {
+    print('[SessionManager] Clearing stored credentials...');
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('session_token');
     await prefs.remove('server_ip');
     await prefs.remove('server_port');
-    await prefs.remove('uid'); // 추가
+    await prefs.remove('uid');
+    
+    // Also clear memory
+    _sessionToken = null;
+    _ip = null;
+    _port = null;
+    _uid = null;
+    print('[SessionManager] Credentials cleared from storage and memory');
   }
 
   /// 세션 키 반환 (앱 전체에서 사용)
