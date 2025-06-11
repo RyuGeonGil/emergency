@@ -78,7 +78,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 itemCount: _devices.length,
                 itemBuilder: (context, index) {
                   final device = _devices[index];
-                  return DeviceCard(device: device);
+                  return DeviceCard(
+                    device: device,
+                    onDeviceToggled: _loadDevices,
+                  );
                 },
               ),
             ),
@@ -132,11 +135,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
 class DeviceCard extends StatelessWidget {
   final Device device;
+  final VoidCallback onDeviceToggled;
 
   const DeviceCard({
-    super.key,
+    Key? key,
     required this.device,
-  });
+    required this.onDeviceToggled,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +167,8 @@ class DeviceCard extends StatelessWidget {
             ? () async {
                 try {
                   await DeviceApi().toggleDevice(device.id, !device.isOn);
+                  // Call the callback to reload devices
+                  onDeviceToggled();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
