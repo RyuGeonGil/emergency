@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SessionManager {
   // 싱글톤 패턴
@@ -10,9 +11,9 @@ class SessionManager {
   String? _sessionToken;
   String? _ip;
   String? _port;
-
+  String? _uid;
   Timer? _renewTimer;
-
+  String? get uid => _uid;
   Timer? get renewTimer => _renewTimer;
   Future<void> renewSession() => _renewSession();
   /// 세션 키, 서버 정보 저장
@@ -20,11 +21,57 @@ class SessionManager {
     required String sessionToken,
     required String ip,
     required String port,
+    required String uid,
   }) {
     _sessionToken = sessionToken;
     _ip = ip;
     _port = port;
+    _uid = uid;
     _setupRenewTimer();
+  }
+
+  Future<void> saveToStorage() async {
+    print('[SessionManager] Saving credentials to storage...');
+    final prefs = await SharedPreferences.getInstance();
+    if (_sessionToken != null) {
+      await prefs.setString('session_token', _sessionToken!);
+    }
+    if (_ip != null) {
+      await prefs.setString('server_ip', _ip!);
+    }
+    if (_port != null) {
+      await prefs.setString('server_port', _port!);
+    }
+    if (_uid != null) {
+      await prefs.setString('uid', _uid!);
+    }
+    print('[SessionManager] Saved credentials - IP: $_ip, Port: $_port, UID: $_uid, Token: ${_sessionToken?.substring(0, 5)}...');
+  }
+
+  Future<void> loadFromStorage() async {
+    print('[SessionManager] Loading credentials from storage...');
+    final prefs = await SharedPreferences.getInstance();
+    _sessionToken = prefs.getString('session_token');
+    _ip = prefs.getString('server_ip');
+    _port = prefs.getString('server_port');
+    _uid = prefs.getString('uid');
+    print('[SessionManager] Loaded credentials - IP: $_ip, Port: $_port, UID: $_uid, Has Token: ${_sessionToken != null}');
+  }
+
+  Future<void> clearStorage() async {
+    print('[SessionManager] Clearing stored credentials...');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('session_token');
+    await prefs.remove('server_ip');
+    await prefs.remove('server_port');
+    await prefs.remove('uid');
+    
+    // Also clear memory
+    _sessionToken = null;
+    _ip = null;
+    _port = null;
+    _uid = null;
+    print('[SessionManager] Credentials cleared from storage and memory');
   }
 
   /// 세션 키 반환 (앱 전체에서 사용)
