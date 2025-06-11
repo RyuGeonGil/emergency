@@ -26,7 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: isDarkMode,
             onChanged: (value) {
               setState(() {
-                themeNotifier.toggleTheme(value);
+                themeNotifier.setThemeMode(value ? ThemeMode.dark : ThemeMode.light);
               });
             },
           ),
@@ -105,12 +105,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class ThemeNotifier extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.light;
+  ThemeMode _themeMode = ThemeMode.system;
+
   ThemeMode get themeMode => _themeMode;
 
-  void toggleTheme(bool isDark) {
-    _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+  void setThemeMode(ThemeMode mode) {
+    _themeMode = mode;
     notifyListeners();
   }
 }
-final ThemeNotifier themeNotifier = ThemeNotifier();
+
+final themeNotifier = ThemeNotifier();
