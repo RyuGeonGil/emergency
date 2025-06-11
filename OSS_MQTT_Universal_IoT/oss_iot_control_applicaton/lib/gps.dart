@@ -43,6 +43,37 @@ class GpsTracker {
     _port = port;
     _uid = uid.toString();
   }
+  Future<void> sendHomeLocation() async {
+    if (_ip.isEmpty || _port.isEmpty || _uid.isEmpty || latitude == null || longitude == null) return;
+
+    final url = 'http://$_ip:$_port/location/fav/point';
+    final headers = {
+      'content-type': 'application/json',
+      'session-token': SessionManager().sessionToken ?? '',
+    };
+    final coordinate = 'POINT($latitude $longitude)';
+    final body = jsonEncode({
+      'uid': _uid,
+      'coordinate': coordinate,
+      'status': 2,
+      'alias': 'House',
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: body,
+      );
+      if (response.statusCode == 200) {
+        debugPrint('집 위치 전송 성공');
+      } else {
+        debugPrint('집 위치 전송 실패: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('집 위치 전송 오류: $e');
+    }
+  }
 
   /// 위치 추적 시작 및 주기적 서버 전송
   Future<void> startTracking({void Function(Position)? onUpdate}) async {
@@ -198,6 +229,15 @@ class _GpsTestScreenState extends State<GpsTestScreen> {
               onPressed: _startTracking,
               child: const Text('위치 추적 시작'),
             ),
+      ElevatedButton(
+        onPressed: () async {
+          await GpsTracker().sendHomeLocation();
+          setState(() {
+            status = "집 위치 전송 요청 완료";
+          });
+        },
+        child: const Text('집 위치 전송'),
+      ),
           ],
         ),
       ),
