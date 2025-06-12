@@ -97,18 +97,22 @@ def uid_get():
     if res.status_code != 200:
         return "아직 유저가 없음"
     p=res.json()
-    p=dict(p[1])
+    p=dict(p[0])
     uid=p['uid']
     return uid
 
 def token_get():
-    res=r.get("http://Integration-Server:3000/service_connect")
-    return res.text
+    try:
+        res=r.get("http://Integration-Server:3000/service_connect")
+        return res.text
+    except Exception as e:
+        print(f"Error getting token: {e}")
+        return None
  
 def point_get(uid):
     headers = {"Content-Type": "application/json", "session-token": token_get()}
     data = f'{{"uid": {uid}}}'
-    res=r.get("http://Integration-Servert:3000/location/latest", headers=headers, data=data)
+    res=r.get("http://Integration-Server:3000/location/latest", headers=headers, data=data)
     if res.status_code != 200:
         return "Error: Unable to fetch point data"
     now_point_data = res.json()

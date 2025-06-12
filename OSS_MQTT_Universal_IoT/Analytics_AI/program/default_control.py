@@ -32,6 +32,9 @@ class control:
         #집의 좌표를 요청해서 받는다
 
         self.now_point=RR.point_get(self.uid)
+        if self.now_point == "Error: Unable to fetch point data":
+            time.sleep(60)#
+            return
         if self.not_work_exit:
             self.route=RR.route_get(self.now_point,self.route)# 도착을 하면 get함수로 받는것이 아니라 work_exit.py에서 받음다만 출근길을 벗어났을때는 이걸 사용함 그때 해결법은?
         #현재 좌표를 입력받는다. 나중에 리퀘스트로 받아야함
@@ -87,9 +90,11 @@ class control:
         print(home_point)
          # 집의 좌표를 실수형으로 저장
 
+        if self.now_point == "Error: Unable to fetch point data":
+            return "집을 안나감"
         data=self.now_point.split()
         now_point=[]
-        now_point.append(float(data[0])) 
+        now_point.append(float(data[0]))
         now_point.append(float(data[1])) 
         print("집과 현재 위치까지의 거리:",PR.range(home_point,now_point))
         if PR.range(home_point,now_point)>=100:

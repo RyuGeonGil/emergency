@@ -9,6 +9,8 @@ import time
 import secrets
 import random
 from flask_bcrypt import Bcrypt
+import json
+from datetime import datetime, date
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -302,6 +304,19 @@ def register():
                 return "Internal Server Error", 500
             return "Registration Sucessful", 200
 
+def convert_mysql_to_json(data):
+    if isinstance(data, dict):
+        return {k: convert_mysql_to_json(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [convert_mysql_to_json(item) for item in data]
+    elif isinstance(data, str):
+        # Replace single quotes with double quotes in strings
+        return data.replace("'", '"')
+    elif isinstance(data, (datetime, date)):
+        # Convert datetime/date objects to string format without 'T'
+        return data.strftime("%Y-%m-%d %H:%M:%S")
+    return data
+
 @app.route("/users", methods=['GET'])
 
 def users():
@@ -324,9 +339,11 @@ def users():
         query = "SELECT uid FROM users WHERE uid <> 0"
         cursor.execute(query)
         ret = cursor.fetchall()
+        # Convert MySQL result to proper JSON format
+        json_data = convert_mysql_to_json(ret)
     except:
         return "Internal Server Error", 500
-    return str(ret)
+    return json.dumps(json_data)
 
 @app.route("/protocol/mqtt/getstats", methods=['GET'])
 
@@ -414,9 +431,10 @@ def logs():
             ret = cursor.fetchall()
             if not ret:
                 return "No data found for uid: {} after location_id: {}".format(uid, search_time), 404
+            json_data = convert_mysql_to_json(ret)
         except:
             return "Internal Server Error", 500
-        return str(ret)
+        return json.dumps(json_data)
         
     elif(request.method == 'POST'):
         try:
@@ -453,15 +471,21 @@ def latest():
     session_uid = auth_stat
 
     # Process
-    
-    get_dict = request.get_json()
-    uid = get_dict["uid"]
-    
-    query = "SELECT id, uid, ST_AsText(coordinate) as coordinate, time FROM locationlog WHERE uid = %s ORDER BY time DESC LIMIT 1"
-    cursor.execute(query, (uid, ))
-    ret = cursor.fetchone()
-
-    return str(ret)
+    try:
+        get_dict = request.get_json()
+        uid = get_dict["uid"]
+        
+        query = "SELECT id, uid, ST_AsText(coordinate) as coordinate, time FROM locationlog WHERE uid = %s ORDER BY time DESC LIMIT 1"
+        cursor.execute(query, (uid, ))
+        ret = cursor.fetchone()
+        if not ret:
+            return "No data found for uid: {}".format(uid), 404
+            
+        json_data = convert_mysql_to_json(ret)
+        return json.dumps(json_data)
+    except Exception as e:
+        print(f"Error in latest endpoint: {str(e)}")
+        return "Internal Server Error", 500
 
 @app.route("/location/fav/point", methods=['GET', 'POST', 'DELETE'])
 
@@ -493,7 +517,8 @@ def point():
         ret = cursor.fetchall()
         if not ret:
             return "No data found for uid: {}".format(uid)
-        return str(ret)
+        json_data = convert_mysql_to_json(ret)
+        return json.dumps(json_data)
     
     # This middleware is usually used by services
     elif(request.method == 'POST'):
@@ -574,7 +599,8 @@ def route():
         ret = cursor.fetchall()
         if not ret:
             return "No data found for startlocation_id: {}".format(startlocation_id), 404
-        return str(ret)
+        json_data = convert_mysql_to_json(ret)
+        return json.dumps(json_data)
     
     elif(request.method == 'POST'):
         try:
@@ -651,9 +677,10 @@ def visits():
         query = 'SELECT count(*) AS visit_times FROM eventlog WHERE location_id = %s AND about = %s AND time BETWEEN NOW() - INTERVAL %s DAY AND NOW()'
         cursor.execute(query, (location_id, visit_identifier, lookup_days, ))
         ret = cursor.fetchone()
+        json_data = convert_mysql_to_json(ret)
     except:
         return "Internal Server Error", 500
-    return str(ret)
+    return json.dumps(json_data)
 
 @app.route("/event/eventlogs", methods=['GET', 'POST', 'DELETE'])
 
@@ -683,7 +710,8 @@ def eventlogs():
         ret = cursor.fetchall()
         if not ret:
             return "No data found for event_id: {}".format(event_id), 404
-        return str(ret)
+        json_data = convert_mysql_to_json(ret)
+        return json.dumps(json_data)
     
     elif(request.method == 'POST'):
         # request process
@@ -769,9 +797,10 @@ def getnoti():
         
         if not ret:
             return "No notification found for {}".format(notification_id), 404
+        json_data = convert_mysql_to_json(ret)
     except:
         return f"Error: {ret}", 500
-    return str(ret)
+    return json.dumps(json_data)
     
 @app.route("/notification/postnoti", methods=['POST'])
 
