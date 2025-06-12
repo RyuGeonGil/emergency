@@ -18,6 +18,13 @@ services:
     container_name: Integration_Server
     networks:
       - backend-network
+    cap_add:
+      - NET_ADMIN        # 네트워크 관리자 권한 추가
+    devices:
+
+      - /dev/net/tun     # TUN 장치가 컨테이너에서 접근할 수 있도록 추가
+    volumes:
+      - /dev/net/tun:/dev/net/tun  # 호스트와 컨테이너 간 TUN 장치 연결
     build:
       context: ./Integration_Server
       dockerfile: Dockerfile
