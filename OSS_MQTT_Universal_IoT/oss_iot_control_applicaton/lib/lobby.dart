@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'models/device.dart';
 import '../api/device_api.dart';
+import 'dart:async'; // Timer를 사용하기 위해 추가
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({Key? key}) : super(key: key);
@@ -16,10 +17,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
   List<Device> _devices = [];
   bool _isLoading = true;
 
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
     _loadDevices();
+    // 30초마다 자동 새로고침 타이머 설정
+    _refreshTimer = Timer.periodic(
+      Duration(seconds: 30),
+          (Timer timer) {
+        _loadDevices();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel(); // 타이머 해제
+    super.dispose();
   }
 
   Future<void> _loadDevices() async {
