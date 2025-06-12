@@ -66,7 +66,6 @@ class UserTracker:
         while self.status == "out":
             
             self.user.get()
-
             if self.user.event == "특정 장소 도착":#if_send는 요청이 비어있을때만 보내는 함수이다
                 self.event = WE.exit(self.user.uid,self.user.event_id)
                 print(f"특정 장소 도착 이벤트 발생: {self.event}")
@@ -79,7 +78,6 @@ class UserTracker:
     def monitor_until_home(self):
         print("퇴근길 아님")
         while self.status == "out":
-            time.sleep(0.5)
             self.user.get()
             if self.user.home_in() == "곧 집에 들어옴":
                 self.prepare_home_entry()

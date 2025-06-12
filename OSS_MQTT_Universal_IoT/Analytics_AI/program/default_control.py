@@ -2,6 +2,7 @@ import machine_swich as MS
 import point_range as PR
 import json
 import set_of_request as RR
+import time
 
 #디폴트 제어는 집에 엄청 가까워졌을때만을 목적으로 하기때문에 레벨은 0 or 1 밖에 없다.
 class control:
@@ -51,7 +52,7 @@ class control:
                     self.event="특정 장소 도착"
                     self.event_id=p['id']
                     return
-        #회사의 좌표가 있다면 요청해서 받는다
+        time.sleep(60)#회사의 좌표가 있다면 요청해서 받는다
 
         
     
@@ -70,7 +71,7 @@ class control:
         now_point.append(float(data[0])) 
         now_point.append(float(data[1])) 
 
-        if PR.range(home_point,now_point)<500:
+        if PR.range(home_point,now_point)<100:
                  self.level=1
                  return "곧 집에 들어옴"
         #현재 위치를 근거로 집 위치와 비교해서 곧 도착하는지 확인하기
@@ -91,7 +92,7 @@ class control:
         now_point.append(float(data[0])) 
         now_point.append(float(data[1])) 
         print("집과 현재 위치까지의 거리:",PR.range(home_point,now_point))
-        if PR.range(home_point,now_point)>=500:
+        if PR.range(home_point,now_point)>=100:
             self.level=0
             return"집을 나감"
         #현재 위치를 근거로 집 위치와 비교해서 나갔는지 확인하기
